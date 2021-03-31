@@ -1,0 +1,121 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: A sample SAM template for deploying Lambda functions.
+
+Globals:
+  Api:
+    EndpointConfiguration: REGIONAL
+    Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+    GatewayResponses:
+      MISSING_AUTHENTICATION_TOKEN:
+        StatusCode: 405
+        ResponseTemplates:
+          "application/json": '{ "message": "Method Not Allowed" }'
+
+  Function:
+    Runtime: python3.8
+    MemorySize: 128
+    Timeout: 900
+    Environment:
+      Variables:
+        REGION: !Ref "AWS::Region"
+
+
+
+
+Resources:
+  # Api Gateway
+  ApiGateway1:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: Test_Api_1
+      StageName: Staging
+  
+  # Lambda
+  Function1:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: Test_Lambda_1
+      CodeUri: ./lambdas/1_lambda
+      Handler: 1_lambda.lambda_handler
+      Policies:
+        - AmazonS3FullAccess
+        - AmazonSQSFullAccess
+        - AWSLambdaSQSQueueExecutionRole  
+      Layers:
+        - !Ref Requestlayer
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway1
+            Path: /hello1
+            Method: GET
+            RequestParameters:
+              - method.request.querystring.token:
+                  Required: true
+                  Caching: false
+
+  # Lambda
+  Function2:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: Test_Lambda_2
+      CodeUri: ./lambdas/2_lambda
+      Handler: 2_lambda.lambda_handler
+      Policies:
+        - AmazonS3FullAccess
+        - AmazonSQSFullAccess
+        - AWSLambdaSQSQueueExecutionRole  
+      Layers:
+        - !Ref PyCryptoDomelayer
+      Events:
+        Api2:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway1
+            Path: /hello2
+            Method: POST
+
+  # Layer
+  Requestlayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: requests_layer
+      Description: Requests Layer
+      ContentUri: ./layers/requests_layer
+      CompatibleRuntimes:
+        - python3.6
+        - python3.7
+        - python3.8
+      LicenseInfo: MIT
+      RetentionPolicy: Delete
+
+  # Layer
+  PyCryptoDomelayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: pycryptodome_layer
+      Description: PyCryptoDome Layer
+      ContentUri: ./layers/pycryptodome_layer
+      CompatibleRuntimes:
+        - python3.6
+        - python3.7
+        - python3.8
+      LicenseInfo: MIT
+      RetentionPolicy: Delete
+
+
+Outputs:
+  ApiGatewayEndpoint1:
+    Description: API Gateway endpoint URL for Staging stage for Lambda function 1
+    Value:
+      Fn::Sub: https://${ApiGateway1}.execute-api.${AWS::Region}.amazonaws.com/Staging/hello1/
+
+  ApiGatewayEndpoint2:
+    Description: API Gateway endpoint URL for Staging stage for Lambda function 2
+    Value:
+      Fn::Sub: https://${ApiGateway1}.execute-api.${AWS::Region}.amazonaws.com/Staging/hello2/
