@@ -1,12 +1,9 @@
 version: 0.2
 phases:
-  build:
+  install:
     commands:
-      - echo Build started on `date`
-      - echo Entered the build phase ...
-      # Package SAM template
-      - sam package --template-file template.yaml --output-template-file packaged.yaml --s3-bucket s3-artifacts-bucket-610147131225 --region us-west-2
-      # Deploy packaged SAM template
-      - sam deploy --template-file packaged.yaml --stack-name sam-app-1 --capabilities CAPABILITY_IAM  --region us-west-2 
-      # Done
-      - echo Deployed the Stack 
+      - aws cloudformation package --template-file template.yaml --output-template-file packaged.yaml --s3-bucket s3-artifacts-bucket-610147131225 --region us-west-2
+artifacts:
+  files:
+    - template.yaml
+    - packaged.yaml
